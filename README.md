@@ -93,7 +93,7 @@ EncryptionParamaters = {
 
 ### API
 
-One idea a new `CredentialRequest` (et al)
+Add a `DocumentCredential` type to the Credential Managment API
 ```
 dictionary CredentialElement {
     required DOMString namespace;  // As defined in ISO 18013-5 clause 8.
