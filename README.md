@@ -142,7 +142,7 @@ let options = {
     },
     nonce,
 };
-navigator.credentials.get("mdoc", options).then((credentialDocument) => { ... });
+navigator.credentials.get(mdoc: options).then((credentialDocument) => { ... });
 ```
 
 ```js
@@ -155,7 +155,7 @@ let options = {
     ],
     nonce,
 };
-navigator.credentials.get("mdoc", options).then((credentialDocument) => { ... });
+navigator.credentials.get(mdoc: options).then((credentialDocument) => { ... });
 ```
 
 
