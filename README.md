@@ -108,7 +108,7 @@ dictionary CredentialStorageDuration {
     long days;  // Cannot (currently) be used with any other properties.
 };
 
-dictionary CredentialDocumentDescriptor {
+dictionary DocumentCredentialOptions {
     required DOMString documentType;  // As defined in ISO 18013-5 clause 8.
 
     required sequence<CredentialElement> requestedElements;
@@ -116,23 +116,16 @@ dictionary CredentialDocumentDescriptor {
     CredentialStorageDuration desiredStorageDuration;  // Not providing this is equivalent to not asking to store.
 };
 
-dictionary CredentialDocument {
+[Exposed=Window, SecureContext]
+interface DocumentCredential : Credential {
     object data;  // The CBOR encoded `CredentialDocument` defined above.
 };
 
-dictionary RequestConfiguration {
-    required DOMString nonce;
-};
-
-[
-    SecureContext,
-    Exposed=Window,
-] interface CredentialRequest {
-    constructor(DOMString requesterIdentity, CredentialDocumentDescriptor documentDescriptor);  // This throws if anything in the `documentDescriptor` is not recognized (e.g. an invalid `documentType`).
-
+dictionary CredentialRequestOptions {
     Promise<CredentialDocument> requestDocument(RequestConfiguration configuration);
 
     Promise<undefined> abort();
+    required DOMString nonce;
 };
 ```
 
@@ -141,7 +134,7 @@ dictionary RequestConfiguration {
 
 ```js
 // Driver's License
-let mDLCredentialRequest = new CredentialRequest(certificate, {
+let options = {
     documentType: "org.iso.18013.5.1.mDL",
     requestedElements: [
         { namespace: "org.iso.18013.5.1", name: "document_number" },
@@ -153,20 +146,22 @@ let mDLCredentialRequest = new CredentialRequest(certificate, {
     desiredStorageDuration: {
         days: 7,
     },
-});
-mDLCredentialRequest.request({ nonce }).then((credentialDocument) => { ... });
+    nonce,
+};
+navigator.credentials.get("mdoc", options).then((credentialDocument) => { ... });
 ```
 
 ```js
 // Vaccination Card
-let micovCredentialRequest = new CredentialRequest(certificate, {
+let options = {
     documentType: "org.micov.1",
     requestedElements: [
         { namespace: "org.micov.attestation.1", name: "PersonId_dl" },
         { namespace: "org.micov.attestation.1", name: "portrait" },
     ],
-});
-micovCredentialRequest.request({ nonce }).then((credentialDocument) => { ... });
+    nonce,
+};
+navigator.credentials.get("mdoc", options).then((credentialDocument) => { ... });
 ```
 
 
