@@ -121,12 +121,6 @@ interface DocumentCredential : Credential {
     object data;  // The CBOR encoded `CredentialDocument` defined above.
 };
 
-dictionary CredentialRequestOptions {
-    Promise<CredentialDocument> requestDocument(RequestConfiguration configuration);
-
-    Promise<undefined> abort();
-    required DOMString nonce;
-};
 ```
 
 
