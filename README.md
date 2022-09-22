@@ -94,7 +94,7 @@ EncryptionParamaters = {
 ### API
 
 One idea a new `CredentialRequest` (et al)
-```
+```idl
 dictionary CredentialElement {
     required DOMString namespace;  // As defined in ISO 18013-5 clause 8.
     required DOMString name;
