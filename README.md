@@ -92,15 +92,18 @@ EncryptionParamaters = {
 
 
 ### API
-
-Add a `DocumentCredential` type to the Credential Managment API
+Add an Identity Managment API, which mirrors the Credential Managment API and add a `DocumentCredential` type to that extends Credential.
 ```
-dictionary CredentialElement {
+partial interface Navigator {
+  [SecureContext, SameObject] readonly attribute CredentialsContainer identity;
+};
+
+dictionary DocumentCredentialElement {
     required DOMString namespace;  // As defined in ISO 18013-5 clause 8.
     required DOMString name;
 };
 
-dictionary CredentialStorageDuration {
+dictionary DocumentCredentialStorageDuration {
     // At least one of these is required.
 
     boolean forever;  // Cannot be used with any other properties.
@@ -111,9 +114,9 @@ dictionary CredentialStorageDuration {
 dictionary DocumentCredentialOptions {
     required DOMString documentType;  // As defined in ISO 18013-5 clause 8.
 
-    required sequence<CredentialElement> requestedElements;
+    required sequence<DocumentCredentialElement> requestedElements;
 
-    CredentialStorageDuration desiredStorageDuration;  // Not providing this is equivalent to not asking to store.
+    DocumentCredentialStorageDuration desiredStorageDuration;  // Not providing this is equivalent to not asking to store.
 };
 
 [Exposed=Window, SecureContext]
@@ -142,7 +145,7 @@ let options = {
     },
     nonce,
 };
-navigator.credentials.get({mdoc: options}).then((credentialDocument) => { ... });
+navigator.identity.get({mdoc: options}).then((credentialDocument) => { ... });
 ```
 
 ```js
@@ -155,7 +158,7 @@ let options = {
     ],
     nonce,
 };
-navigator.credentials.get({mdoc: options}).then((credentialDocument) => { ... });
+navigator.identity.get({mdoc: options}).then((credentialDocument) => { ... });
 ```
 
 
