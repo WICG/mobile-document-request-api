@@ -134,13 +134,19 @@ partial dictionary IdentityProviderConfig  {
   optional sequence<DOMString> certificates;
 
   required DOMString documentType;
-  required sequence<MdocElement> requestedElements;
+  required sequence<MdocRequestedElement> requestedElements;
 };
 
 dictionary MdocElement {
   required DOMString namespace;  // As defined in ISO 18013-5 clause 8.
   required DOMString name;
 };
+
+dictionary MdocRequestedElement : MdocElement{
+  boolean critical;
+  DOMString oneOfGroup;
+};
+
 
 partial dictionary IdentityProviderConfig {
   // ...
@@ -214,6 +220,55 @@ let request = {
 };
 ```
 
+Requesting mDL attributes with organ donor as non-critical:
+
+```js
+let request = {
+  identity: {
+    retention: {
+      days: 90,
+    },
+    providers: [{
+      scheme: “mdoc”,
+      nonce: "gf69kepV+m5tGxMyMF0cnn9NCnRHez/LUIsFtLi6pwg=",
+      documentType: "org.iso.18013.5.1.mDL",
+      readerPublicKey: "ftl+VEHPB17r2oi6it3ENaqhOOB0AZbAkb5f4VlCPakpdNioc9QZ7X/6w...",
+      requestedElements: [
+        { namespace: "org.iso.18013.5.1", name: "document_number" },
+        { namespace: "org.iso.18013.5.1", name: "portrait" },
+        { namespace: "org.iso.18013.5.1", name: "driving_privileges" },
+        { namespace: "org.iso.18013.5.1.aamva", name: "organ_donor", critical: false },
+        { namespace: "org.iso.18013.5.1.aamva", name: "hazmat_endorsement_expiration_date" },
+      ],
+    }],
+  }
+};
+
+```
+
+Requesting mDL attributes specifying a request of one of age over 18 or date of birth:
+
+```js
+let request = {
+  identity: {
+    retention: {
+      days: 90,
+    },
+    providers: [{
+      scheme: “mdoc”,
+      nonce: "gf69kepV+m5tGxMyMF0cnn9NCnRHez/LUIsFtLi6pwg=",
+      documentType: "org.iso.18013.5.1.mDL",
+      readerPublicKey: "ftl+VEHPB17r2oi6it3ENaqhOOB0AZbAkb5f4VlCPakpdNioc9QZ7X/6w...",
+      requestedElements: [
+        { namespace: "org.iso.18013.5.1", name: "portrait" },
+        { namespace: "org.iso.18013.5.1", name: "date_of_birth", oneOfGroup: "ofage" },
+        { namespace: "org.iso.18013.5.1", name: "age_over_18", oneOfGroup: "ofAge" },
+      ],
+    }],
+  }
+};
+
+```
 
 ## Privacy & Security Considerations
 
