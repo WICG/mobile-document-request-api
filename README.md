@@ -143,7 +143,7 @@ dictionary MdocElement {
 };
 
 dictionary MdocRequestedElement : MdocElement{
-  boolean critical;
+  boolean critical = true;
   DOMString oneOfGroup;
 };
 
