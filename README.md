@@ -93,82 +93,182 @@ EncryptionParamaters = {
 
 ### API
 
-One idea a new `CredentialRequest` (et al)
+We propose to build upon the Credential Manager’s “identity” request, which [Federated Credential Management](https://fedidcg.github.io/FedCM/#dictdef-identitycredentialrequestoptions) is also built on top of, with the following structures:
+
+```webidl
+// The existing extension to the credential management API:
+partial dictionary CredentialRequestOptions {
+  IdentityCredentialRequestOptions identity;
+};
+
+dictionary IdentityCredentialRequestOptions {
+  required sequence<IdentityProviderConfig> providers;
+
+  // Common fields across all types of providers:
+
+  // Omitting `retention` implies that the identity information will not be stored.
+  IdentityStorageDuration retention;
+};
+
+dictionary IdentityStorageDuration {
+  // Exactly one of the following must be provided.
+  boolean forever;
+  long days;
+};
+
+dictionary IdentityProviderConfig {
+  required string scheme;
+
+  // Common fields across all identity provider types:
+  required DOMString nonce;
+};
+
+// extends the IdentityProviderConfig with mDoc-specific attributes
+partial dictionary IdentityProviderConfig  {
+  // For use where `scheme` is `mdoc`:
+
+  // base64-encoded reader HPKE public key.
+  required DOMString readerPublicKey;
+
+  // base64-encoded reader certification chain, if the platform requires it.
+  optional sequence<DOMString> certificates;
+
+  required DOMString documentType;
+  required sequence<MdocRequestedElement> requestedElements;
+};
+
+dictionary MdocElement {
+  required DOMString namespace;  // As defined in ISO 18013-5 clause 8.
+  required DOMString name;
+};
+
+dictionary MdocRequestedElement : MdocElement{
+  boolean critical = true;
+  DOMString oneOfGroup;
+};
+
+
+partial dictionary IdentityProviderConfig {
+  // ...
+  // Federated provider specific configs, not covered here.
+  // ...
+};
 ```
-dictionary CredentialElement {
-    required DOMString namespace;  // As defined in ISO 18013-5 clause 8.
-    required DOMString name;
-};
 
-dictionary CredentialStorageDuration {
-    // At least one of these is required.
+There is always a bijection from `IdentityCredentialRequestOptions` to JSON strings, and that bijection is implemented by `JSON.parse` and `JSON.stringify`. This allows requests to be generated on the server and easily transported to the user agent.
 
-    boolean forever;  // Cannot be used with any other properties.
+When an `IdentityCredentialRequestOptions` is used with [`get`](https://www.w3.org/TR/credential-management-1/#dom-credentialscontainer-get), the result is an `IdentityCredential`:
 
-    long days;  // Cannot (currently) be used with any other properties.
-};
-
-dictionary CredentialDocumentDescriptor {
-    required DOMString documentType;  // As defined in ISO 18013-5 clause 8.
-
-    required sequence<CredentialElement> requestedElements;
-
-    CredentialStorageDuration desiredStorageDuration;  // Not providing this is equivalent to not asking to store.
-};
-
-dictionary CredentialDocument {
-    object data;  // The CBOR encoded `CredentialDocument` defined above.
-};
-
-dictionary RequestConfiguration {
-    required DOMString nonce;
-};
-
-[
-    SecureContext,
-    Exposed=Window,
-] interface CredentialRequest {
-    constructor(DOMString requesterIdentity, CredentialDocumentDescriptor documentDescriptor);  // This throws if anything in the `documentDescriptor` is not recognized (e.g. an invalid `documentType`).
-
-    Promise<CredentialDocument> requestDocument(RequestConfiguration configuration);
-
-    Promise<undefined> abort();
+```webidl
+[Exposed=Window, SecureContext]
+interface IdentityCredential : Credential {
+  // The CBOR encoded `CredentialDocument` defined above, wrapped in base64.
+  DOMString token;
 };
 ```
 
+The `id` of the `IdentityCredential` for an mdoc response would be `mdoc`.
 
 ## Examples
 
+Requesting specific attributes from a driver’s license:
+
 ```js
-// Driver's License
-let mDLCredentialRequest = new CredentialRequest(certificate, {
-    documentType: "org.iso.18013.5.1.mDL",
-    requestedElements: [
+let request = {
+  identity: {
+    retention: {
+      days: 90,
+    },
+    providers: [{
+      scheme: “mdoc”,
+      nonce: "gf69kepV+m5tGxMyMF0cnn9NCnRHez/LUIsFtLi6pwg=",
+      documentType: "org.iso.18013.5.1.mDL",
+      readerPublicKey: "ftl+VEHPB17r2oi6it3ENaqhOOB0AZbAkb5f4VlCPakpdNioc9QZ7X/6w...",
+      requestedElements: [
         { namespace: "org.iso.18013.5.1", name: "document_number" },
         { namespace: "org.iso.18013.5.1", name: "portrait" },
         { namespace: "org.iso.18013.5.1", name: "driving_privileges" },
         { namespace: "org.iso.18013.5.1.aamva", name: "organ_donor" },
         { namespace: "org.iso.18013.5.1.aamva", name: "hazmat_endorsement_expiration_date" },
-    ],
-    desiredStorageDuration: {
-        days: 7,
-    },
+      ],
+    }],
+  }
+};
+navigator.credentials.get(request).then(() => {
 });
-mDLCredentialRequest.request({ nonce }).then((credentialDocument) => { ... });
 ```
+
+Requesting specific mDL attributes from a COVID card:
 
 ```js
-// Vaccination Card
-let micovCredentialRequest = new CredentialRequest(certificate, {
-    documentType: "org.micov.1",
-    requestedElements: [
-        { namespace: "org.micov.attestation.1", name: "PersonId_dl" },
-        { namespace: "org.micov.attestation.1", name: "portrait" },
-    ],
-});
-micovCredentialRequest.request({ nonce }).then((credentialDocument) => { ... });
+let request = {
+  identity: {
+    retention: {
+      days: 90,
+    },
+    providers: [{
+      scheme: “mdoc”,
+      documentType: "org.micov.1",
+        requestedElements: [
+          { namespace: "org.micov.attestation.1", name: "PersonId_dl" },
+          { namespace: "org.micov.attestation.1", name: "portrait" },
+      ],
+      nonce: "gf69kepV+m5tGxMyMF0cnn9NCnRHez/LUIsFtLi6pwg=",
+      readerPublicKey: "ftl+VEHPB17r2oi6it3ENaqhOOB0AZbAkb5f4VlCPakpdNioc9QZ7X/6w..."
+    }],
+  }
+};
 ```
 
+Requesting mDL attributes with organ donor as non-critical:
+
+```js
+let request = {
+  identity: {
+    retention: {
+      days: 90,
+    },
+    providers: [{
+      scheme: “mdoc”,
+      nonce: "gf69kepV+m5tGxMyMF0cnn9NCnRHez/LUIsFtLi6pwg=",
+      documentType: "org.iso.18013.5.1.mDL",
+      readerPublicKey: "ftl+VEHPB17r2oi6it3ENaqhOOB0AZbAkb5f4VlCPakpdNioc9QZ7X/6w...",
+      requestedElements: [
+        { namespace: "org.iso.18013.5.1", name: "document_number" },
+        { namespace: "org.iso.18013.5.1", name: "portrait" },
+        { namespace: "org.iso.18013.5.1", name: "driving_privileges" },
+        { namespace: "org.iso.18013.5.1.aamva", name: "organ_donor", critical: false },
+        { namespace: "org.iso.18013.5.1.aamva", name: "hazmat_endorsement_expiration_date" },
+      ],
+    }],
+  }
+};
+
+```
+
+Requesting mDL attributes specifying a request of one of age over 18 or date of birth:
+
+```js
+let request = {
+  identity: {
+    retention: {
+      days: 90,
+    },
+    providers: [{
+      scheme: “mdoc”,
+      nonce: "gf69kepV+m5tGxMyMF0cnn9NCnRHez/LUIsFtLi6pwg=",
+      documentType: "org.iso.18013.5.1.mDL",
+      readerPublicKey: "ftl+VEHPB17r2oi6it3ENaqhOOB0AZbAkb5f4VlCPakpdNioc9QZ7X/6w...",
+      requestedElements: [
+        { namespace: "org.iso.18013.5.1", name: "portrait" },
+        { namespace: "org.iso.18013.5.1", name: "date_of_birth", oneOfGroup: "ofage" },
+        { namespace: "org.iso.18013.5.1", name: "age_over_18", oneOfGroup: "ofAge" },
+      ],
+    }],
+  }
+};
+
+```
 
 ## Privacy & Security Considerations
 
