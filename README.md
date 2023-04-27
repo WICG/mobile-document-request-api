@@ -6,7 +6,7 @@
 - [@dcrousso](https://github.com/dcrousso)
 - [@hlozi](https://github.com/hlozi)
 - [@martijnharing](https://github.com/martijnharing)
-
+- [@agl](https://github.com/agl)
 
 ## Participate
 
@@ -223,7 +223,6 @@ This API provides the ability for websites to retrieve an ISO 18013-5 mDoc alrea
 Many thanks for valuable feedback and advice from:
 
 - [@15characterlimi](https://github.com/15characterlimi)
-- [@agl](https://github.com/agl)
 - [@balfanz](https://github.com/balfanz)
 - [@bslassey](https://github.com/bslassey)
 - [@cwilso](https://github.com/cwilso)
