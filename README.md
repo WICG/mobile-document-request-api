@@ -52,14 +52,6 @@ partial dictionary IdentityProviderConfig  {
   optional MDocsSpecificParameters mdoc;
 }
 
-dictionary CredentialStorageDuration {
-    // At least one of these is required.
-
-    boolean forever;  // Cannot be used with any other properties.
-
-    long days;  // Cannot (currently) be used with any other properties.
-};
-
 dictionary MDocsSpecificParameters {
   required DOMString nonce;
 
@@ -69,9 +61,10 @@ dictionary MDocsSpecificParameters {
   // The elements of the mdoc requested.
   required sequence<MdocElement> requestedElements;
 
-  // The duration of time that the requester will keep the data for.
-  // Not providing this is equivalent to not asking to store.
-  CredentialStorageDuration retention;
+  // The number of days that the requester will keep the data for.
+  // Not providing this is equivalent to 0, meaning not asking to store.
+  // Infinity means forever.
+  double retentionDays;
 
   // A set of reader identities. Each value is a base64-encoded sequence of one
   // or more X.509 certificates in ASN.1 DER encoding (a “chain” of
@@ -105,9 +98,7 @@ let request = {
       mdoc: {
         nonce: "gf69kepV+m5tGxMyMF0cnn9NCnRHez/LUIsFtLi6pwg=",
         documentType: "org.iso.18013.5.1.mDL",
-        retention: {
-            days: 90
-        },
+        retentionDays: 90,
         readerPublicKey: ["ftl+VEHPB17r2oi6it3ENaqhOOB0AZbAkb5f4VlCPakpdNioc9QZ7X/6w..."],
         requestedElements: [
           { namespace: "org.iso.18013.5.1", name: "document_number" },
@@ -183,9 +174,7 @@ let request = {
       mdoc: {
         nonce: "gf69kepV+m5tGxMyMF0cnn9NCnRHez/LUIsFtLi6pwg=",
         readerPublicKey: ["ftl+VEHPB17r2oi6it3ENaqhOOB0AZbAkb5f4VlCPakpdNioc9QZ7X…"],
-        retention: {
-          days: 90,
-        },
+        retentionDays: 90,
         documentType: "org.iso.18013.5.1.mDL",
         requestedElements: [
           { namespace: "org.iso.18013.5.1", name: "document_number" },
@@ -211,9 +200,7 @@ let request = {
       mdoc: {
         nonce: "gf69kepV+m5tGxMyMF0cnn9NCnRHez/LUIsFtLi6pwg=",
         readerPublicKey: ["ftl+VEHPB17r2oi6it3ENaqhOOB0AZbAkb5f4VlCPakpdNioc9QZ7X…"],
-        retention: {
-          days: 90,
-        },
+        retentionDays: 90,
         documentType: "org.micov.1",
         requestedElements: [
           { namespace: "org.micov.attestation.1", name: "PersonId_dl" },
