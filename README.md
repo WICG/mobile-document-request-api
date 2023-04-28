@@ -49,10 +49,10 @@ This API would be a new identity scheme within [IdentityCredential](https://gith
 
 ```webidl
 partial dictionary IdentityProviderConfig  {
-  optional MDocsSpecificParameters mdoc;
+  optional MdocIdentityProviderConfig mdoc;
 }
 
-dictionary MDocsSpecificParameters {
+dictionary MdocIdentityProviderConfig {
   required DOMString nonce;
 
   // The mdoc document type requested. See ISO 18013-5 section 7.1.
