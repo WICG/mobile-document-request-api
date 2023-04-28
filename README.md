@@ -7,6 +7,7 @@
 - [@hlozi](https://github.com/hlozi)
 - [@martijnharing](https://github.com/martijnharing)
 - [@agl](https://github.com/agl)
+- [@samuelgoto](https://github.com/samuelgoto)
 
 ## Participate
 
@@ -28,6 +29,7 @@ The mechanisms defined by ISO/IEC 18013-5 are designed to support any type of mo
 - Enable the user to have control of what data is released to the website. 
 - Protect the released data using encryption to ensure only the website the data is intended for can access the data.
 - Don't preclude the addition of other credential types in the future, if needed.
+- Integrate with other types of identity requests which websites may want to let users choose between.
 
 
 ## Non-goals
@@ -46,11 +48,19 @@ This API would be a new identity scheme within [IdentityCredential](https://gith
 ### Requests
 
 ```webidl
-partial dictionary IdentityProviderRequestOptions  {
-  optional MdocRequest mdoc;
+partial dictionary IdentityProviderConfig  {
+  optional MDocsSpecificParameters mdoc;
 }
 
-dictionary MdocRequest  {
+dictionary CredentialStorageDuration {
+    // At least one of these is required.
+
+    boolean forever;  // Cannot be used with any other properties.
+
+    long days;  // Cannot (currently) be used with any other properties.
+};
+
+dictionary MDocsSpecificParameters {
   required DOMString nonce;
 
   // The mdoc document type requested. See ISO 18013-5 section 7.1.
@@ -59,11 +69,9 @@ dictionary MdocRequest  {
   // The elements of the mdoc requested.
   required sequence<MdocElement> requestedElements;
 
-  // The number of days that the requester will keep the data for.
-  // Must be non-negative. A value of zero indicates that the data
-  // will not be retained beyond the time to process it. A value of
-  // positive infinity indicates unlimited retention.
-  required double retentionDays;
+  // The duration of time that the requester will keep the data for.
+  // Not providing this is equivalent to not asking to store.
+  CredentialStorageDuration retention;
 
   // A set of reader identities. Each value is a base64-encoded sequence of one
   // or more X.509 certificates in ASN.1 DER encoding (a “chain” of
@@ -93,19 +101,23 @@ An example request:
 ```js
 let request = {
   identity: {
-    mdoc: {
-      nonce: "gf69kepV+m5tGxMyMF0cnn9NCnRHez/LUIsFtLi6pwg=",
-      documentType: "org.iso.18013.5.1.mDL",
-      retentionDays: 90,
-      readerAuthentication: ["ftl+VEHPB17r2oi6it3ENaqhOOB0AZbAkb5f4VlCPakpdNioc9QZ7X/6w..."],
-      mdocRequestedElements: [
-        { namespace: "org.iso.18013.5.1", name: "document_number" },
-        { namespace: "org.iso.18013.5.1", name: "portrait" },
-        { namespace: "org.iso.18013.5.1", name: "driving_privileges" },
-        { namespace: "org.iso.18013.5.1.aamva", name: "organ_donor" },
-        { namespace: "org.iso.18013.5.1.aamva", name: "hazmat_endorsement_expiration_date" },
-      ],
-    },
+    providers: [{
+      mdoc: {
+        nonce: "gf69kepV+m5tGxMyMF0cnn9NCnRHez/LUIsFtLi6pwg=",
+        documentType: "org.iso.18013.5.1.mDL",
+        retention: {
+            days: 90
+        },
+        readerPublicKey: ["ftl+VEHPB17r2oi6it3ENaqhOOB0AZbAkb5f4VlCPakpdNioc9QZ7X/6w..."],
+        requestedElements: [
+          { namespace: "org.iso.18013.5.1", name: "document_number" },
+          { namespace: "org.iso.18013.5.1", name: "portrait" },
+          { namespace: "org.iso.18013.5.1", name: "driving_privileges" },
+          { namespace: "org.iso.18013.5.1.aamva", name: "organ_donor" },
+          { namespace: "org.iso.18013.5.1.aamva", name: "hazmat_endorsement_expiration_date" },
+        ],
+      },
+    }],
   }
 };
 navigator.credentials.get(request).then(() => {
@@ -114,9 +126,9 @@ navigator.credentials.get(request).then(() => {
 
 ### Processing
 
-If the user rejects the request, or if no applicable mdocs are available, or if the identity in `readerAuthentication` is not authorized to request the applicable mdoc, then a "[NotAllowedError](https://heycam.github.io/webidl/#notallowederror)" [DOMException](https://heycam.github.io/webidl/#idl-DOMException) is raised.
+If the user rejects the request, or if no applicable mdocs are available, or if the identity in `readerPublicKey` is not authorized to request the applicable mdoc, then a "[NotAllowedError](https://heycam.github.io/webidl/#notallowederror)" [DOMException](https://heycam.github.io/webidl/#idl-DOMException) is raised.
 
-Otherwise the application holding the responsive mdoc builds a response according to ISO/IEC 18013-5, including the credential data itself, the authentication by the issuer, and the authentication by the device, encrypting everything with the key taken from the selected `readerAuthentication` value.
+Otherwise the application holding the responsive mdoc builds a response according to ISO/IEC 18013-5, including the credential data itself, the authentication by the issuer, and the authentication by the device, encrypting everything with the key taken from the selected `readerPublicKey` value.
 
 ### Response
 
@@ -167,19 +179,23 @@ Requesting specific attributes from a driver’s license:
 ```js
 let request = {
   identity: {
-    mdoc: [{
-      retentionDays: 90,
-      nonce: "gf69kepV+m5tGxMyMF0cnn9NCnRHez/LUIsFtLi6pwg=",
-      documentType: "org.iso.18013.5.1.mDL",
-      readerAuthentication: ["ftl+VEHPB17r2oi6it3ENaqhOOB0AZbAkb5f4VlCPakpdNioc9QZ7X…"],
-      mdocRequestedElements: [
-        { namespace: "org.iso.18013.5.1", name: "document_number" },
-        { namespace: "org.iso.18013.5.1", name: "portrait" },
-        { namespace: "org.iso.18013.5.1", name: "driving_privileges" },
-        { namespace: "org.iso.18013.5.1.aamva", name: "organ_donor" },
-        { namespace: "org.iso.18013.5.1.aamva", name: "hazmat_endorsement_expiration_date" },
-      ],
-    },
+    providers: [{
+      mdoc: {
+        nonce: "gf69kepV+m5tGxMyMF0cnn9NCnRHez/LUIsFtLi6pwg=",
+        readerPublicKey: ["ftl+VEHPB17r2oi6it3ENaqhOOB0AZbAkb5f4VlCPakpdNioc9QZ7X…"],
+        retention: {
+          days: 90,
+        },
+        documentType: "org.iso.18013.5.1.mDL",
+        requestedElements: [
+          { namespace: "org.iso.18013.5.1", name: "document_number" },
+          { namespace: "org.iso.18013.5.1", name: "portrait" },
+          { namespace: "org.iso.18013.5.1", name: "driving_privileges" },
+          { namespace: "org.iso.18013.5.1.aamva", name: "organ_donor" },
+          { namespace: "org.iso.18013.5.1.aamva", name: "hazmat_endorsement_expiration_date" },
+        ],
+      }
+    }]
   }
 };
 navigator.credentials.get(request).then(() => {
@@ -191,16 +207,20 @@ Requesting specific mDL attributes from a COVID card:
 ```js
 let request = {
   identity: {
-    mdoc: [{
-      documentType: "org.micov.1",
-      retentionDays: 90,
-      nonce: "gf69kepV+m5tGxMyMF0cnn9NCnRHez/LUIsFtLi6pwg=",
-      readerAuthentication: ["ftl+VEHPB17r2oi6it3ENaqhOOB0AZbAkb5f4VlCPakpdNioc9QZ7X…"],
-      mdocRequestedElements: [
-        { namespace: "org.micov.attestation.1", name: "PersonId_dl" },
-        { namespace: "org.micov.attestation.1", name: "portrait" },
-      ],
-    },
+    providers: [{
+      mdoc: {
+        nonce: "gf69kepV+m5tGxMyMF0cnn9NCnRHez/LUIsFtLi6pwg=",
+        readerPublicKey: ["ftl+VEHPB17r2oi6it3ENaqhOOB0AZbAkb5f4VlCPakpdNioc9QZ7X…"],
+        retention: {
+          days: 90,
+        },
+        documentType: "org.micov.1",
+        requestedElements: [
+          { namespace: "org.micov.attestation.1", name: "PersonId_dl" },
+          { namespace: "org.micov.attestation.1", name: "portrait" },
+        ],
+      },
+    }],
   }
 };
 ```
@@ -230,5 +250,4 @@ Many thanks for valuable feedback and advice from:
 - [@divegeek](https://github.com/divegeek)
 - [@hober](https://github.com/hober)
 - [@jyasskin](https://github.com/jyasskin)
-- [@samuelgoto](https://github.com/samuelgoto)
 - [@sethmoo](https://github.com/sethmoo)
