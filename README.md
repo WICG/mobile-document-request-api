@@ -1,3 +1,5 @@
+This content was moved to  https://github.com/WICG/identity-credential
+
 # Mobile Document Request API
 
 
